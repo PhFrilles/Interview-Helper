@@ -9,11 +9,59 @@ from django.views.decorators.http import require_POST
 from django.utils.encoding import smart_str
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+
 import logging
 import re
+import sys
+import os
+import tempfile
+import time
+from pathlib import Path
+
+
+# Gemini AI imports - CORRECT WAY
+try:
+    from google import genai
+    GEMINI_AVAILABLE = True
+    print("✓ google.genai imported successfully (new package)")
+except ImportError as e:
+    print(f"✗ Error importing google.genai: {e}")
+    print("  Install with: pip install google-genai")
+    GEMINI_AVAILABLE = False
+    genai = None
+
+# MoviePy imports
+try:
+    from moviepy.editor import VideoFileClip
+    MOVIEPY_AVAILABLE = True
+    print("✓ moviepy imported successfully")
+except ImportError as e:
+    print(f"✗ Error importing moviepy: {e}")
+    print("  Please install with: pip install moviepy")
+    MOVIEPY_AVAILABLE = False
+    VideoFileClip = None
+    
+logger = logging.getLogger(__name__)
+
+# Initialize Gemini client if available
+client = None
+if GEMINI_AVAILABLE and genai is not None:
+    try:
+        GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', 'AIzaSyAHXYkFv4HP2Detzi6Yobc0W30_CyRXeEU')
+        
+        # NEW API for google-genai package
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        print("✓ Gemini client initialized successfully with new API")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize Gemini client: {e}")
+        client = None
+else:
+    print("⚠ Gemini AI not available - some features will be disabled")
+
 # Create your views here.
 
-def start(request):
+def welcome(request):
     return  render(request, 'welcome.html')
 
 def login(request):
@@ -56,11 +104,387 @@ def register(request):
     else:
         return render(request, 'register.html')
     
+def interview(request):
+    
+    
+    return render(request, 'interview.html')
+
+#conversion of video to audio
+def convert_video_to_audio(video_path, audio_path=None):
+    """
+    Convert video file to MP3 audio file (kept as fallback)
+    Tries MoviePy first, falls back to FFmpeg if needed
+    """
+    # Create audio path if not provided
+    if audio_path is None:
+        temp_dir = tempfile.gettempdir()
+        timestamp = int(time.time())
+        audio_path = os.path.join(temp_dir, f"audio_{timestamp}.mp3")
+    
+    # Get file extension
+    file_ext = os.path.splitext(video_path)[1].lower()
+    
+    # For WebM files, use FFmpeg directly (more reliable)
+    if file_ext == '.webm':
+        logger.info("WebM file detected - using FFmpeg directly")
+        try:
+            return extract_audio_with_ffmpeg(video_path, audio_path)
+        except Exception as ffmpeg_error:
+            raise RuntimeError(f"WebM conversion failed: {ffmpeg_error}")
+    
+    # For other formats, try MoviePy first
+    if MOVIEPY_AVAILABLE:
+        try:
+            logger.info(f"Trying MoviePy for: {video_path}")
+            video = VideoFileClip(video_path)
+            
+            video.audio.write_audiofile(
+                audio_path, 
+                verbose=False, 
+                logger=None,
+                fps=44100,
+                bitrate="192k"
+            )
+            
+            video.close()
+            
+            if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+                file_size = os.path.getsize(audio_path)
+                logger.info(f"MoviePy extraction successful: {audio_path} ({file_size/1024:.1f} KB)")
+                return audio_path
+                
+        except Exception as moviepy_error:
+            logger.warning(f"MoviePy failed: {moviepy_error}")
+            # Fall through to FFmpeg
+    
+    # Fall back to FFmpeg for all other cases
+    logger.info("Falling back to FFmpeg extraction")
+    return extract_audio_with_ffmpeg(video_path, audio_path)
+
+def extract_audio_with_ffmpeg(video_path, audio_path):
+    """
+    Extract audio from video using FFmpeg directly
+    """
+    import subprocess
+    
+    try:
+        logger.info(f"Extracting audio with FFmpeg: {video_path}")
+        
+        # FFmpeg command to extract audio
+        cmd = [
+            'ffmpeg',
+            '-i', video_path,
+            '-vn',
+            '-acodec', 'libmp3lame',
+            '-ab', '192k',
+            '-ac', '2',
+            '-ar', '44100',
+            '-y',
+            audio_path
+        ]
+        
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg extraction failed: {result.stderr}")
+        
+        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+            file_size = os.path.getsize(audio_path)
+            logger.info(f"FFmpeg extraction successful: {audio_path} ({file_size/1024:.1f} KB)")
+            return audio_path
+        else:
+            raise RuntimeError("FFmpeg extraction failed - empty output")
+            
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("FFmpeg extraction timed out")
+    except Exception as e:
+        raise RuntimeError(f"FFmpeg extraction error: {str(e)}")
+    
+#conversion of audio to text
 
 def home(request):
     return render(request, 'home.html')
 
+def logout(request):    
+    auth.logout(request)
+    return redirect('start')
 
+# Add these functions after convert_video_to_audio
+
+def get_gemini_feedback_from_video(video_path, question_type="general"):
+    """
+    Get feedback from Gemini based on the video response directly
+    Sends video file to Gemini instead of converting to audio first
+    """
+    if not GEMINI_AVAILABLE or client is None:
+        return "Gemini AI not available. Please check your API key and installation."
+    
+    # Define prompts
+    prompts = {
+        "general": """Analyze this video interview response and provide constructive feedback. 
+        Your feedback should be in paragraph form only - no headings, no bullet points, no numbered lists, just a single continuous paragraph.
+        Focus on: 
+        1. Communication clarity and pace
+        2. Body language and eye contact (if visible)
+        3. Confidence and enthusiasm
+        4. Relevance to the question
+        5. Areas for improvement
+        Be specific and actionable.""",
+        
+        "technical": """Analyze this technical interview response from the video. 
+        Provide feedback on: 
+        1. Technical accuracy and knowledge depth
+        2. Problem-solving approach and logical thinking
+        3. Ability to explain complex concepts clearly
+        4. Communication effectiveness
+        5. Areas for technical improvement
+        Format your response as a single continuous paragraph.""",
+        
+        "behavioral": """Analyze this behavioral interview response from the video. 
+        Provide feedback on: 
+        1. STAR method usage (Situation, Task, Action, Result)
+        2. Relevance and specificity of examples
+        3. Storytelling ability and engagement
+        4. Demonstration of soft skills (teamwork, leadership, etc.)
+        5. Overall presentation and confidence
+        Format your response as a single continuous paragraph."""
+    }
+    
+    prompt = prompts.get(question_type, prompts["general"])
+    
+    try:
+        # Upload the video file directly to Gemini
+        print(f"Uploading video file to Gemini: {video_path}")
+        uploaded_file = client.files.upload(file=video_path)
+        
+        # Generate content with the video file
+        print(f"Generating feedback from Gemini for {question_type} question...")
+        response = client.models.generate_content(
+            model="gemini-1.5-flash-pro",  # Using 1.5-pro which has better video understanding
+            contents=[
+                prompt,
+                uploaded_file
+            ]
+        )
+        
+        return response.text
+        
+    except Exception as e:
+        logger.error(f"Gemini API error: {e}")
+        # Fallback to audio if video fails
+        try:
+            print("Video analysis failed, trying audio conversion...")
+            return get_gemini_feedback_from_audio_fallback(video_path, question_type)
+        except Exception as fallback_error:
+            return f"Error getting feedback: {str(e)}"
+
+def get_gemini_feedback_from_audio_fallback(video_path, question_type):
+    """
+    Fallback method: Convert video to audio first, then send to Gemini
+    Used if direct video analysis fails
+    """
+    # Convert video to audio first
+    audio_path = convert_video_to_audio(video_path)
+    
+    # Define prompts for audio-only analysis
+    prompts = {
+        "general": "Analyze this audio interview response and provide constructive feedback. Focus on: clarity of communication, pace, confidence level, relevance to the question, and areas for improvement. Be specific and actionable.",
+        "technical": "Analyze this technical interview response from the audio. Provide feedback on: technical accuracy, problem-solving approach, communication of complex concepts, and areas for improvement.",
+        "behavioral": "Analyze this behavioral interview response from the audio. Provide feedback on: STAR method usage, relevance of examples, storytelling ability, and demonstration of soft skills."
+    }
+    
+    prompt = prompts.get(question_type, prompts["general"])
+    
+    try:
+        uploaded_file = client.files.upload(file=audio_path)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash-pro",
+            contents=[prompt, uploaded_file]
+        )
+        
+        # Clean up audio file
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            
+        return response.text
+        
+    except Exception as e:
+        # Clean up on error
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+        raise
+
+@login_required
+@csrf_exempt
+@require_POST
+def analyze_interview(request):
+    """Process interview video and get AI feedback directly from video"""
+    try:
+        if 'video_file' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No video file provided'}, status=400)
+        
+        video_file = request.FILES['video_file']
+        question_type = request.POST.get('question_type', 'general')
+        
+        # Accept multiple video formats
+        valid_extensions = ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.wmv']
+        original_name = video_file.name
+        file_extension = os.path.splitext(original_name)[1].lower()
+        
+        if file_extension and file_extension not in valid_extensions:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Unsupported file format. Supported formats: {", ".join(valid_extensions)}'
+            }, status=400)
+        
+        # Check file size (max 100MB)
+        if video_file.size > 100 * 1024 * 1024:
+            return JsonResponse({'success': False, 'error': 'File too large (max 100MB)'}, status=400)
+        
+        # Check if file has content
+        if video_file.size == 0:
+            return JsonResponse({'success': False, 'error': 'Empty video file'}, status=400)
+        
+        # Save video temporarily
+        if not file_extension:
+            file_extension = '.webm'  # Default for browser recordings
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_video:
+            for chunk in video_file.chunks():
+                tmp_video.write(chunk)
+            video_path = tmp_video.name
+        
+        logger.info(f"Saved video to: {video_path} (size: {video_file.size} bytes, type: {file_extension})")
+        
+        try:
+            # Get Gemini feedback - try direct video analysis first
+            if GEMINI_AVAILABLE and client is not None:
+                try:
+                    # Try direct video analysis
+                    feedback = get_gemini_feedback_from_video(video_path, question_type)
+                    analysis_type = 'video_direct'
+                    
+                except Exception as video_error:
+                    logger.warning(f"Direct video analysis failed, trying audio fallback: {video_error}")
+                    
+                    # Fall back to audio conversion and analysis
+                    try:
+                        # Convert video to audio first
+                        audio_path = convert_video_to_audio(video_path)
+                        
+                        # Use audio for Gemini analysis
+                        feedback = get_gemini_feedback_from_audio(audio_path, question_type)
+                        analysis_type = 'audio_fallback'
+                        
+                        # Clean up audio file
+                        if os.path.exists(audio_path):
+                            os.remove(audio_path)
+                            
+                    except Exception as audio_error:
+                        logger.error(f"Audio fallback also failed: {audio_error}")
+                        raise RuntimeError(f"Both video and audio analysis failed: {str(video_error)}")
+                        
+            else:
+                feedback = "Gemini AI not available. Please check your API configuration."
+                analysis_type = 'unavailable'
+            
+            # Clean up temporary video file
+            if os.path.exists(video_path):
+                os.remove(video_path)
+            
+            return JsonResponse({
+                'success': True,
+                'feedback': feedback,
+                'question_type': question_type,
+                'analysis_type': analysis_type  # Include analysis type in response
+            })
+            
+        except Exception as e:
+            # Clean up on error
+            if os.path.exists(video_path):
+                os.remove(video_path)
+            
+            logger.error(f"Processing error: {e}", exc_info=True)
+            return JsonResponse({
+                'success': False, 
+                'error': f'Video analysis error: {str(e)}',
+                'suggestion': 'Try recording in MP4 format or keeping the video under 2 minutes.'
+            }, status=500)
+            
+    except Exception as e:
+        logger.error(f"Server error: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False, 
+            'error': f'Server error: {str(e)}'
+        }, status=500)
+        
+# Add this function after analyze_interview
+@csrf_exempt
+def system_status(request):
+    """Check system status"""
+    import subprocess
+    
+    status = {
+        'python_version': sys.version,
+        'moviepy_available': MOVIEPY_AVAILABLE,
+        'gemini_available': GEMINI_AVAILABLE,
+        'ffmpeg_available': False,
+        'system_ready': False
+    }
+    
+    # Check FFmpeg
+    try:
+        result = subprocess.run(['ffmpeg', '-version'], 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=5)
+        status['ffmpeg_available'] = result.returncode == 0
+    except:
+        pass
+    
+    # Overall status
+    status['system_ready'] = (
+        status['moviepy_available'] and 
+        status['gemini_available'] and 
+        status['ffmpeg_available']
+    )
+    
+    return JsonResponse(status)
+
+# Also add the test_gemini_connection function
+@csrf_exempt
+def test_gemini_connection(request):
+    """Test Gemini AI connection"""
+    if not GEMINI_AVAILABLE or client is None:
+        return JsonResponse({
+            'success': False,
+            'message': 'Gemini client not initialized'
+        })
+    
+    try:
+        # Test with a simple text prompt
+        response = client.models.generate_content(
+            model="gemini-1.5-flash-pro",
+            contents="Hello, please respond with 'Gemini is working!' and nothing else."
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Gemini API is working',
+            'response': response.text
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        })
+        
 @login_required
 def session_success(request):
     return redirect("home")

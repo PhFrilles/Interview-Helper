@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interview Practice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        button.record {
+            background: #dc3545;
+        }
+        button.record:hover {
+            background: #c82333;
+        }
+        button.recording {
+            background: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #28a745;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .video-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        video {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 8px;
+            background: #000;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .recording-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .question-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .question-display h3 {
+            margin-top: 0;
+        }
+        .instructions {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interview Practice</h1>
+    <p>Record your interview response video to get AI feedback.</p>
+    
+    <div class="instructions">
+        <strong>Instructions:</strong>
+        <ol>
+            <li>Allow camera and microphone access when prompted</li>
+            <li>Select a question type and read the prompt</li>
+            <li>Click "Start Recording" and answer the question</li>
+            <li>Click "Stop Recording" when finished</li>
+            <li>Review your recording and submit for AI feedback</li>
+        </ol>
+    </div>
+    
+    <div class="container">
+        <form id="interviewForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="questionType">Question Type:</label>
+                <select id="questionType" name="question_type">
+                    <option value="general">General Interview</option>
+                    <option value="technical">Technical Question</option>
+                    <option value="behavioral">Behavioral Question</option>
+                </select>
+            </div>
+            
+            <div class="question-display">
+                <h3>Question Prompt:</h3>
+                <p id="questionPrompt">Tell me about yourself and why you're interested in this position.</p>
+            </div>
+            
+            <div class="video-container">
+                <video id="videoPreview" autoplay muted playsinline></video>
+                <video id="videoPlayback" controls style="display: none;"></video>
+                
+                <div class="timer" id="timer" style="display: none;">
+                    <span class="recording-indicator"></span>
+                    <span id="timeDisplay">00:00</span>
+                </div>
+                
+                <div class="controls">
+                    <button type="button" id="startBtn">🎤 Start Recording</button>
+                    <button type="button" id="stopBtn" class="record" disabled>⏹️ Stop Recording</button>
+                    <button type="button" id="retakeBtn" style="display: none;">🔄 Retake</button>
+                </div>
+            </div>
+            
+            <input type="hidden" id="videoBlob" name="video_blob">
+            
+            <button type="submit" id="submitBtn" disabled>
+                <span id="btnText">Submit for Analysis</span>
+                <span id="btnSpinner" class="spinner" style="display: none;"></span>
+            </button>
+        </form>
+        
+        <div id="errorMsg" class="error" style="display: none;"></div>
+        <div id="successMsg" class="success" style="display: none;"></div>
+        
+        <div id="feedbackSection" style="display: none;">
+            <h2>AI Feedback:</h2>
+            <div class="feedback">
+                <p id="feedbackText"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <h3>Quick Links:</h3>
+        <p><a href="{% url 'system_status' %}">Check System Status</a></p>
+        <p><a href="{% url 'test_gemini' %}">Test Gemini Connection</a></p>
+        <p><a href="{% url 'home' %}">Return to Home</a></p>
+    </div>
+    
+    <script>
+        // DOM elements
+        const questionTypeSelect = document.getElementById('questionType');
+        const questionPrompt = document.getElementById('questionPrompt');
+        const videoPreview = document.getElementById('videoPreview');
+        const videoPlayback = document.getElementById('videoPlayback');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const timer = document.getElementById('timer');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const videoBlobInput = document.getElementById('videoBlob');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        const feedbackSection = document.getElementById('feedbackSection');
+        const feedbackText = document.getElementById('feedbackText');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+        
+        // Questions for each type
+        const questions = {
+            general: "Tell me about yourself and why you're interested in this position.",
+            technical: "Explain a complex technical concept or project you've worked on recently.",
+            behavioral: "Describe a time you faced a significant challenge at work and how you handled it."
+        };
+        
+        // Variables
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordingStartTime = null;
+        let timerInterval = null;
+        let recordedBlob = null;
+        
+        // Update question when type changes
+        questionTypeSelect.addEventListener('change', function() {
+            questionPrompt.textContent = questions[this.value] || questions.general;
+        });
+        
+        // Initialize with default question
+        questionPrompt.textContent = questions.general;
+        
+        // Request camera and microphone access
+        async function initializeCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: true
+                });
+                
+                videoPreview.srcObject = stream;
+                return stream;
+                
+            } catch (err) {
+                showError('Camera/microphone access denied. Please allow access to use this feature.');
+                console.error('Camera error:', err);
+                return null;
+            }
+        }
+        
+        // Start recording
+        startBtn.addEventListener('click', async function() {
+            try {
+                const stream = await initializeCamera();
+                if (!stream) return;
+                
+                // Set up MediaRecorder
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'video/webm;codecs=vp9,opus'
+                });
+                
+                // Collect recorded chunks
+                recordedChunks = [];
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                // Handle recording stop
+                mediaRecorder.onstop = function() {
+                    // Create blob from recorded chunks
+                    recordedBlob = new Blob(recordedChunks, { type: 'video/webm' });
+                    
+                    // Create object URL for playback
+                    const videoURL = URL.createObjectURL(recordedBlob);
+                    videoPlayback.src = videoURL;
+                    
+                    // Show playback, hide preview
+                    videoPreview.style.display = 'none';
+                    videoPlayback.style.display = 'block';
+                    
+                    // Convert blob to base64 for form submission
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        const base64data = reader.result;
+                        videoBlobInput.value = base64data.split(',')[1]; // Remove data:video/webm;base64, prefix
+                    };
+                    reader.readAsDataURL(recordedBlob);
+                    
+                    // Update UI
+                    startBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    stopBtn.classList.remove('recording');
+                    retakeBtn.style.display = 'inline-block';
+                    submitBtn.disabled = false;
+                    
+                    // Stop timer
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    timer.style.display = 'none';
+                    
+                    // Stop camera streams
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                // Start recording
+                mediaRecorder.start(1000); // Collect data every second
+                
+                // Update UI
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                stopBtn.classList.add('recording');
+                timer.style.display = 'block';
+                
+                // Start timer
+                recordingStartTime = Date.now();
+                updateTimer();
+                timerInterval = setInterval(updateTimer, 1000);
+                
+                // Hide error if any
+                errorMsg.style.display = 'none';
+                
+            } catch (err) {
+                showError('Error starting recording: ' + err.message);
+                console.error('Recording error:', err);
+            }
+        });
+        
+        // Stop recording
+        stopBtn.addEventListener('click', function() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+        });
+        
+        // Retake recording
+        retakeBtn.addEventListener('click', function() {
+            // Reset UI
+            recordedBlob = null;
+            recordedChunks = [];
+            videoBlobInput.value = '';
+            
+            // Show preview, hide playback
+            videoPlayback.style.display = 'none';
+            videoPreview.style.display = 'block';
+            
+            // Reset buttons
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            stopBtn.classList.remove('recording');
+            retakeBtn.style.display = 'none';
+            submitBtn.disabled = true;
+            
+            // Hide feedback if shown
+            feedbackSection.style.display = 'none';
+            successMsg.style.display = 'none';
+            
+            // Reinitialize camera
+            initializeCamera();
+        });
+        
+        // Update timer display
+        function updateTimer() {
+            if (!recordingStartTime) return;
+            
+            const elapsed = Date.now() - recordingStartTime;
+            const seconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            timeDisplay.textContent = 
+                `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+            
+            // Limit recording to 5 minutes
+            if (seconds >= 300) { // 5 minutes = 300 seconds
+                stopBtn.click();
+                showError('Recording stopped: Maximum 5 minute limit reached.');
+            }
+        }
+        
+        // Form submission
+        document.getElementById('interviewForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!recordedBlob) {
+                showError('Please record a video first.');
+                return;
+            }
+            
+            // Reset messages
+            errorMsg.style.display = 'none';
+            successMsg.style.display = 'none';
+            feedbackSection.style.display = 'none';
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('question_type', questionTypeSelect.value);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            // Convert blob to file
+            const videoFile = new File([recordedBlob], 'interview.webm', { type: 'video/webm' });
+            formData.append('video_file', videoFile);
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            btnText.textContent = 'Analyzing...';
+            btnSpinner.style.display = 'inline-block';
+            
+            try {
+                const response = await fetch('{% url "analyze_interview" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+
+                
+                if (data.success) {
+                    // Show feedback
+                    feedbackText.textContent = data.feedback;
+                    feedbackSection.style.display = 'block';
+    
+                    // Show analysis type if available
+                    if (data.analysis_type === 'video_direct') {
+                        successMsg.textContent = '✅ Analysis complete! (Video analyzed directly by AI)';
+                    } else if (data.analysis_type === 'audio_fallback') {
+                        successMsg.textContent = '✅ Analysis complete! (Audio extracted and analyzed)';
+                    } else {
+                        successMsg.textContent = '✅ Analysis complete!';
+                    }
+                    successMsg.style.display = 'block';
+    
+                    // Scroll to feedback
+                    feedbackSection.scrollIntoView({ behavior: 'smooth' });
+                }
+                    
+            } catch (error) {
+                showError('Network error. Please try again.');
+                console.error('Error:', error);
+            } finally {
+                // Reset button
+                submitBtn.disabled = false;
+                btnText.textContent = 'Submit for Analysis';
+                btnSpinner.style.display = 'none';
+            }
+        });
+        
+        // Show error message
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            errorMsg.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Initialize camera on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            initializeCamera();
+        });
+    </script>
+</body>
+</html>

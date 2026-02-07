@@ -118,3 +118,5 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = (os.path.join(BASE_DIR,'static'),)
+
+#GEMINI_API_KEY = 'AIzaSyCh-9w-x6sKPRY-9byaL2CyEWF7ELVXXi8'
