@@ -1,0 +1,46 @@
+{%load static%}
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <link rel="stylesheet" href="{% static 'login.css' %}">
+
+    <h1>LOGIN</h1><br>
+
+
+    
+    <form action="{% url 'login' %}" method="POST">
+        {% csrf_token %}
+        <p>USERNAME</p>
+        <input type="text" name="username" />
+        <p>PASSWORD</p>
+        <input type="password" name="password" /><br>
+        <input type="submit"/>
+
+        {% for message in messages%}
+        <h3>{{message}}</h3>
+        {% endfor %}
+    </form><br>
+
+    <div class="register-link">
+        <a href="{% url 'register' %}" class="btn btn-primary">Don't have an account ?</a>
+    </div>
+
+
+
+</body>
+</html>
+
+
+
+
+
