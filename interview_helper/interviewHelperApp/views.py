@@ -261,17 +261,51 @@ def get_gemini_feedback_from_video(video_path, question_type="general"):
         # Upload the video file directly to Gemini
         print(f"Uploading video file to Gemini: {video_path}")
         uploaded_file = client.files.upload(file=video_path)
+        print(f"File uploaded with name: {uploaded_file.name}, initial state: {uploaded_file.state}")
+        
+        # CRITICAL: Wait for file to be ACTIVE
+        print("Waiting for file to process...")
+        import time
+        
+        max_wait_time = 30  # Maximum 30 seconds
+        check_interval = 2  # Check every 2 seconds
+        wait_time = 0
+        
+        while wait_time < max_wait_time:
+            # Get current file state
+            uploaded_file = client.files.get(name=uploaded_file.name)
+            current_state = uploaded_file.state
+            
+            print(f"File state after {wait_time}s: {current_state}")
+            
+            if current_state.name == "ACTIVE":
+                print("✅ File is now ACTIVE and ready to use!")
+                break
+            elif current_state.name == "FAILED":
+                print("❌ File processing failed")
+                raise Exception(f"File processing failed: {current_state}")
+            
+            # Wait and check again
+            time.sleep(check_interval)
+            wait_time += check_interval
+        
+        # Check if file is active after waiting
+        uploaded_file = client.files.get(name=uploaded_file.name)
+        if uploaded_file.state.name != "ACTIVE":
+            print(f"⚠️ File still not active after {max_wait_time} seconds")
+            raise Exception(f"File processing timed out. State: {uploaded_file.state.name}")
         
         # Generate content with the video file
         print(f"Generating feedback from Gemini for {question_type} question...")
         response = client.models.generate_content(
-            model="gemini-1.5-flash-pro",  # Using 1.5-pro which has better video understanding
+            model="gemini-2.5-flash",
             contents=[
                 prompt,
                 uploaded_file
             ]
         )
         
+        print("✅ Feedback generated successfully!")
         return response.text
         
     except Exception as e:
@@ -282,42 +316,6 @@ def get_gemini_feedback_from_video(video_path, question_type="general"):
             return get_gemini_feedback_from_audio_fallback(video_path, question_type)
         except Exception as fallback_error:
             return f"Error getting feedback: {str(e)}"
-
-def get_gemini_feedback_from_audio_fallback(video_path, question_type):
-    """
-    Fallback method: Convert video to audio first, then send to Gemini
-    Used if direct video analysis fails
-    """
-    # Convert video to audio first
-    audio_path = convert_video_to_audio(video_path)
-    
-    # Define prompts for audio-only analysis
-    prompts = {
-        "general": "Analyze this audio interview response and provide constructive feedback. Focus on: clarity of communication, pace, confidence level, relevance to the question, and areas for improvement. Be specific and actionable.",
-        "technical": "Analyze this technical interview response from the audio. Provide feedback on: technical accuracy, problem-solving approach, communication of complex concepts, and areas for improvement.",
-        "behavioral": "Analyze this behavioral interview response from the audio. Provide feedback on: STAR method usage, relevance of examples, storytelling ability, and demonstration of soft skills."
-    }
-    
-    prompt = prompts.get(question_type, prompts["general"])
-    
-    try:
-        uploaded_file = client.files.upload(file=audio_path)
-        response = client.models.generate_content(
-            model="gemini-1.5-flash-pro",
-            contents=[prompt, uploaded_file]
-        )
-        
-        # Clean up audio file
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
-            
-        return response.text
-        
-    except Exception as e:
-        # Clean up on error
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
-        raise
 
 @login_required
 @csrf_exempt
@@ -422,7 +420,72 @@ def analyze_interview(request):
             'success': False, 
             'error': f'Server error: {str(e)}'
         }, status=500)
+def get_gemini_feedback_from_audio_fallback(video_path, question_type):
+    """
+    Fallback method: Convert video to audio first, then send to Gemini
+    Used if direct video analysis fails
+    """
+    # Convert video to audio first
+    print("Converting video to audio for fallback analysis...")
+    audio_path = convert_video_to_audio(video_path)
+    print(f"Audio saved to: {audio_path}")
+    
+    # Define prompts for audio-only analysis
+    prompts = {
+        "general": "Analyze this audio interview response and provide constructive feedback. Focus on: clarity of communication, pace, confidence level, relevance to the question, and areas for improvement. Be specific and actionable.",
+        "technical": "Analyze this technical interview response from the audio. Provide feedback on: technical accuracy, problem-solving approach, communication of complex concepts, and areas for improvement.",
+        "behavioral": "Analyze this behavioral interview response from the audio. Provide feedback on: STAR method usage, relevance of examples, storytelling ability, and demonstration of soft skills."
+    }
+    
+    prompt = prompts.get(question_type, prompts["general"])
+    
+    try:
+        print(f"Uploading audio file to Gemini: {audio_path}")
+        uploaded_file = client.files.upload(file=audio_path)
+        print(f"Audio file uploaded: {uploaded_file.name}, initial state: {uploaded_file.state}")
         
+        # Wait for audio file to be ACTIVE
+        import time
+        max_wait = 30
+        wait_time = 0
+        
+        while wait_time < max_wait:
+            uploaded_file = client.files.get(name=uploaded_file.name)
+            print(f"Audio file state after {wait_time}s: {uploaded_file.state}")
+            
+            if uploaded_file.state.name == "ACTIVE":
+                print("✅ Audio file is ACTIVE")
+                break
+            elif uploaded_file.state.name == "FAILED":
+                raise Exception(f"Audio file processing failed: {uploaded_file.state}")
+            
+            time.sleep(2)
+            wait_time += 2
+        
+        uploaded_file = client.files.get(name=uploaded_file.name)
+        if uploaded_file.state.name != "ACTIVE":
+            raise Exception(f"Audio file processing timed out. State: {uploaded_file.state.name}")
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[prompt, uploaded_file]
+        )
+        
+        print("✅ Audio analysis successful!")
+        
+        # Clean up audio file
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+            print(f"Cleaned up audio file: {audio_path}")
+            
+        return response.text
+        
+    except Exception as e:
+        # Clean up on error
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
+        raise
+    
 # Add this function after analyze_interview
 @csrf_exempt
 def system_status(request):
@@ -469,7 +532,7 @@ def test_gemini_connection(request):
     try:
         # Test with a simple text prompt
         response = client.models.generate_content(
-            model="gemini-1.5-flash-pro",
+            model="gemini-2.5-flash",
             contents="Hello, please respond with 'Gemini is working!' and nothing else."
         )
         

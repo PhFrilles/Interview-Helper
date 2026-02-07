@@ -219,9 +219,9 @@
     
     <div style="margin-top: 20px;">
         <h3>Quick Links:</h3>
-        <p><a href="{% url 'system_status' %}">Check System Status</a></p>
-        <p><a href="{% url 'test_gemini' %}">Test Gemini Connection</a></p>
-        <p><a href="{% url 'home' %}">Return to Home</a></p>
+        <p><a href="/system-status/">Check System Status</a></p>
+        <p><a href="/test-gemini/">Test Gemini Connection</a></p>
+        <p><a href="/home/">Return to Home</a></p>
     </div>
     
     <script>
@@ -323,7 +323,7 @@
                     const reader = new FileReader();
                     reader.onloadend = function() {
                         const base64data = reader.result;
-                        videoBlobInput.value = base64data.split(',')[1]; // Remove data:video/webm;base64, prefix
+                        videoBlobInput.value = base64data.split(',')[1];
                     };
                     reader.readAsDataURL(recordedBlob);
                     
@@ -346,7 +346,7 @@
                 };
                 
                 // Start recording
-                mediaRecorder.start(1000); // Collect data every second
+                mediaRecorder.start(1000);
                 
                 // Update UI
                 startBtn.disabled = true;
@@ -414,13 +414,13 @@
                 `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
             
             // Limit recording to 5 minutes
-            if (seconds >= 300) { // 5 minutes = 300 seconds
+            if (seconds >= 300) {
                 stopBtn.click();
                 showError('Recording stopped: Maximum 5 minute limit reached.');
             }
         }
         
-        // Form submission
+        // Form submission - FIXED: Using absolute path
         document.getElementById('interviewForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -434,10 +434,17 @@
             successMsg.style.display = 'none';
             feedbackSection.style.display = 'none';
             
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            if (!csrfToken) {
+                showError('CSRF token missing. Please refresh the page.');
+                return;
+            }
+            
             // Create FormData
             const formData = new FormData();
             formData.append('question_type', questionTypeSelect.value);
-            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            formData.append('csrfmiddlewaretoken', csrfToken);
             
             // Convert blob to file
             const videoFile = new File([recordedBlob], 'interview.webm', { type: 'video/webm' });
@@ -449,7 +456,8 @@
             btnSpinner.style.display = 'inline-block';
             
             try {
-                const response = await fetch('{% url "analyze_interview" %}', {
+                // FIXED: Using absolute path instead of Django template tag
+                const response = await fetch('/analyze-interview/', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -457,15 +465,17 @@
                     }
                 });
                 
-                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
                 
-
+                const data = await response.json();
                 
                 if (data.success) {
                     // Show feedback
                     feedbackText.textContent = data.feedback;
                     feedbackSection.style.display = 'block';
-    
+
                     // Show analysis type if available
                     if (data.analysis_type === 'video_direct') {
                         successMsg.textContent = '✅ Analysis complete! (Video analyzed directly by AI)';
@@ -475,14 +485,16 @@
                         successMsg.textContent = '✅ Analysis complete!';
                     }
                     successMsg.style.display = 'block';
-    
+
                     // Scroll to feedback
                     feedbackSection.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    showError(data.error || 'Analysis failed. Please try again.');
                 }
                     
             } catch (error) {
-                showError('Network error. Please try again.');
-                console.error('Error:', error);
+                console.error('Submission error:', error);
+                showError('Network error: ' + error.message + '. Please try again.');
             } finally {
                 // Reset button
                 submitBtn.disabled = false;
