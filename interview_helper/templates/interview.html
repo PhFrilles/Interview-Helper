@@ -81,6 +81,16 @@
             border-radius: 5px;
             border-left: 4px solid #007bff;
         }
+        .tts-controls {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tts-status {
+            font-size: 13px;
+            color: #555;
+        }
         .error {
             color: #dc3545;
             padding: 10px;
@@ -213,6 +223,10 @@
             <h2>AI Feedback:</h2>
             <div class="feedback">
                 <p id="feedbackText"></p>
+                <div class="tts-controls">
+                    <button type="button" id="ttsBtn" disabled>🔊 Play Feedback</button>
+                    <span id="ttsStatus" class="tts-status"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -241,6 +255,8 @@
         const successMsg = document.getElementById('successMsg');
         const feedbackSection = document.getElementById('feedbackSection');
         const feedbackText = document.getElementById('feedbackText');
+        const ttsBtn = document.getElementById('ttsBtn');
+        const ttsStatus = document.getElementById('ttsStatus');
         const btnText = document.getElementById('btnText');
         const btnSpinner = document.getElementById('btnSpinner');
         
@@ -257,6 +273,7 @@
         let recordingStartTime = null;
         let timerInterval = null;
         let recordedBlob = null;
+        let ttsAudioUrl = null;
         
         // Update question when type changes
         questionTypeSelect.addEventListener('change', function() {
@@ -396,6 +413,8 @@
             // Hide feedback if shown
             feedbackSection.style.display = 'none';
             successMsg.style.display = 'none';
+            ttsBtn.disabled = true;
+            ttsStatus.textContent = '';
             
             // Reinitialize camera
             initializeCamera();
@@ -475,6 +494,8 @@
                     // Show feedback
                     feedbackText.textContent = data.feedback;
                     feedbackSection.style.display = 'block';
+                    ttsBtn.disabled = false;
+                    ttsStatus.textContent = '';
 
                     // Show analysis type if available
                     if (data.analysis_type === 'video_direct') {
@@ -509,6 +530,69 @@
             errorMsg.style.display = 'block';
             errorMsg.scrollIntoView({ behavior: 'smooth' });
         }
+
+        // Play TTS for feedback
+        ttsBtn.addEventListener('click', async function() {
+            const text = feedbackText.textContent.trim();
+            if (!text) {
+                showError('No feedback text available for speech.');
+                return;
+            }
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            if (!csrfToken) {
+                showError('CSRF token missing. Please refresh the page.');
+                return;
+            }
+
+            ttsBtn.disabled = true;
+            ttsStatus.textContent = 'Generating audio...';
+
+            try {
+                const response = await fetch('/tts-feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                if (!response.ok) {
+                    let message = `TTS error: ${response.status}`;
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.error) {
+                            message = errData.error;
+                        }
+                    } catch (e) {
+                        // Ignore JSON parse errors
+                    }
+                    throw new Error(message);
+                }
+
+                const audioBlob = await response.blob();
+                if (ttsAudioUrl) {
+                    URL.revokeObjectURL(ttsAudioUrl);
+                }
+                ttsAudioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(ttsAudioUrl);
+                audio.addEventListener('ended', function() {
+                    ttsStatus.textContent = '';
+                });
+                audio.addEventListener('error', function() {
+                    ttsStatus.textContent = '';
+                });
+                await audio.play();
+                ttsStatus.textContent = 'Playing audio.';
+            } catch (error) {
+                showError(error.message || 'Failed to generate audio.');
+                ttsStatus.textContent = '';
+            } finally {
+                ttsBtn.disabled = false;
+            }
+        });
         
         // Initialize camera on page load
         window.addEventListener('DOMContentLoaded', function() {

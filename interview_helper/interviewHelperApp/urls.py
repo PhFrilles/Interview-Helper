@@ -10,6 +10,7 @@ urlpatterns = [
     
     # NEW PATHS TO ADD:
     path('analyze-interview/', views.analyze_interview, name='analyze_interview'),
+    path('tts-feedback/', views.tts_feedback, name='tts_feedback'),
     path('system-status/', views.system_status, name='system_status'),
     path('test-gemini/', views.test_gemini_connection, name='test_gemini'),
     path('logout/', views.logout, name='logout'),

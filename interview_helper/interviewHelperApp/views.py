@@ -7,16 +7,19 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils.encoding import smart_str
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 
 import logging
+import json
 import re
 import sys
 import os
 import tempfile
 import time
 from pathlib import Path
+
+import requests
 
 
 # Gemini AI imports - CORRECT WAY
@@ -420,6 +423,81 @@ def analyze_interview(request):
             'success': False, 
             'error': f'Server error: {str(e)}'
         }, status=500)
+
+
+@login_required
+@require_POST
+def tts_feedback(request):
+    api_key = getattr(settings, 'ELEVENLABS_API_KEY', os.getenv('ELEVENLABS_API_KEY', '')).strip()
+    if not api_key:
+        return JsonResponse({
+            'success': False,
+            'error': 'ElevenLabs API key is not configured.'
+        }, status=500)
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON payload.'
+        }, status=400)
+
+    text = (payload.get('text') or '').strip()
+    if not text:
+        return JsonResponse({
+            'success': False,
+            'error': 'Text is required for speech synthesis.'
+        }, status=400)
+
+    if len(text) > 2000:
+        return JsonResponse({
+            'success': False,
+            'error': 'Text is too long for speech synthesis (max 2000 chars).'
+        }, status=400)
+
+    voice_id = getattr(
+        settings,
+        'ELEVENLABS_VOICE_ID',
+        os.getenv('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
+    )
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {
+        'xi-api-key': api_key,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg'
+    }
+    data = {
+        'text': text,
+        'model_id': 'eleven_multilingual_v2',
+        'voice_settings': {
+            'stability': 0.5,
+            'similarity_boost': 0.75
+        }
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+    except requests.RequestException as exc:
+        logger.error(f"ElevenLabs request failed: {exc}")
+        return JsonResponse({
+            'success': False,
+            'error': 'TTS provider request failed.'
+        }, status=502)
+
+    if response.status_code != 200:
+        logger.error(
+            "ElevenLabs error %s: %s",
+            response.status_code,
+            response.text[:200]
+        )
+        return JsonResponse({
+            'success': False,
+            'error': 'TTS provider returned an error.'
+        }, status=502)
+
+    return HttpResponse(response.content, content_type='audio/mpeg')
 def get_gemini_feedback_from_audio_fallback(video_path, question_type):
     """
     Fallback method: Convert video to audio first, then send to Gemini
