@@ -10,6 +10,7 @@ from django.utils.encoding import smart_str
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import CommunityQuestion
+from .models import Question
 
 import logging
 import json
@@ -146,7 +147,49 @@ def interview(request):
     })
 
 def createQuestion(request):
-    return render(request, 'createQuestion.html')
+    """
+    Handle both form display and submission
+    """
+    context = {}
+    
+    if request.method == 'POST':
+        # Get form data
+        company = request.POST.get('company', '').strip()
+        role = request.POST.get('role', '').strip()
+        question = request.POST.get('question', '').strip()
+        
+        # Save to context for re-populating form
+        context['company'] = company
+        context['role'] = role
+        context['question'] = question
+        
+        # Check if all fields are filled
+        if company and role and question:
+            try:
+                # Save to database
+                Question.objects.create(
+                    company=company,
+                    role=role,
+                    text=question,
+                    creator=request.user  # Make sure user is logged in
+                )
+                
+                # Show success message
+                context['success'] = True
+                
+                # Clear form fields after successful submission
+                context['company'] = ''
+                context['role'] = ''
+                context['question'] = ''
+                
+            except Exception as e:
+                logger.error(f"Error saving question: {e}")
+                context['error'] = f'Error saving question: {str(e)}'
+        else:
+            # Show error
+            context['error'] = 'Please fill all fields'
+    
+    return render(request, 'createQuestion.html', context)
 
 #conversion of video to audio
 def convert_video_to_audio(video_path, audio_path=None):
@@ -515,11 +558,10 @@ def tts_feedback(request):
             'error': 'Text is required for speech synthesis.'
         }, status=400)
 
-    if len(text) > 2000:
-        return JsonResponse({
-            'success': False,
-            'error': 'Text is too long for speech synthesis (max 2000 chars).'
-        }, status=400)
+    # Limit to 500 characters to stay within free tier quota
+    if len(text) > 500:
+        text = text[:497] + "..."
+        logger.info(f"Truncated TTS text to 500 chars to save credits")
 
     voice_id = getattr(
         settings,
@@ -552,11 +594,20 @@ def tts_feedback(request):
         }, status=502)
 
     if response.status_code != 200:
+        error_detail = response.text[:200]
         logger.error(
             "ElevenLabs error %s: %s",
             response.status_code,
-            response.text[:200]
+            error_detail
         )
+        
+        # Check for quota exceeded
+        if "quota_exceeded" in error_detail.lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'Voice synthesis quota exceeded. The feedback text is too long for your current plan.'
+            }, status=502)
+        
         return JsonResponse({
             'success': False,
             'error': 'TTS provider returned an error.'
@@ -690,6 +741,8 @@ def test_gemini_connection(request):
             'success': False,
             'message': str(e)
         })
+
+
         
 @login_required
 def session_success(request):

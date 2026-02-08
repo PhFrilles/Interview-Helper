@@ -1,9 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>New Question</title>
-    <body>
-        <p>New Question</p>
-    </body>
-
+    <title>Interview Form</title>
+    <style>
+        body { font-family: Arial; max-width: 500px; margin: 50px auto; padding: 20px; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        textarea { height: 100px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    
+    {% if success %}
+        <div class="success">
+            <h2>✅ Saved Successfully!</h2>
+            <p>Your interview entry has been added to the database.</p>
+        </div>
+    {% endif %}
+    
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <h1>Add Interview Question</h1>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Company Name:</label>
+            <input type="text" name="company" value="{{ company|default:'' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Job Role:</label>
+            <input type="text" name="role" value="{{ role|default:'' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Interview Question:</label>
+            <textarea name="question" required>{{ question|default:'' }}</textarea>
+        </div>
+        
+        <button type="submit">Save to Database</button>
+    </form>
+</body>
 </html>
