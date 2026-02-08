@@ -109,6 +109,9 @@ def interview(request):
     
     return render(request, 'interview.html')
 
+def createQuestion(request):
+    return render(request, 'createQuestion.html')
+
 #conversion of video to audio
 def convert_video_to_audio(video_path, audio_path=None):
     """
