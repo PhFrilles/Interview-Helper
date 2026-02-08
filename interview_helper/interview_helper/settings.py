@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -116,7 +117,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = (os.path.join(BASE_DIR,'static'),)
 
 # Gemini AI (Interview Feedback)
@@ -125,3 +126,5 @@ GEMINI_API_KEY = 'AIzaSyBAHtymG7q3CJpYVRmIXdgIruIH8s3SsRY'
 # ElevenLabs (Text-to-Speech)
 ELEVENLABS_API_KEY = 'sk_6105eec568594b5967f41a9edfe9ffb4714d82bc0d36b6cf'
 ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'
+
+ALLOWED_HOSTS = ["*"]
