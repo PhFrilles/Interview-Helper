@@ -65,3 +65,82 @@ h1 {
 .login-link {
     margin: 10px;
 }
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+}
+
+.modal-backdrop.open {
+    display: flex;
+}
+
+.modal-card {
+    background: #f8f8f6;
+    border: 2px solid black;
+    border-radius: 20px;
+    padding: 24px 26px 28px;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    text-align: left;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-card h2 {
+    margin: 0 0 6px;
+    font-size: 1.6em;
+}
+
+.modal-subtitle {
+    margin: 0 0 18px;
+    font-size: 0.95em;
+    color: #2d2d2d;
+}
+
+.modal-card label {
+    display: block;
+    margin: 12px 0 6px;
+    font-size: 0.95em;
+    font-weight: 600;
+}
+
+.modal-card input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 2px solid black;
+    font-family: "Oswald", serif;
+    font-size: 1em;
+    background-color: #eff0ef;
+}
+
+.modal-submit {
+    margin-top: 16px;
+    width: 100%;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    font-size: 1.2em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.modal-error {
+    margin-top: 10px;
+    color: #7a1c1c;
+    min-height: 18px;
+    font-size: 0.9em;
+}

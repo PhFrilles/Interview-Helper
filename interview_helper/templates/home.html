@@ -18,7 +18,7 @@
     <h1>Home page</h1>
 
     <div class="interview-link">
-        <a href="{% url 'interview' %}" class="btn btn-primary">Start interview</a>
+        <button type="button" id="startInterviewBtn" class="btn btn-primary">Start interview</button>
     </div>
 
     <div class="create-question-link">
@@ -28,6 +28,73 @@
     <div class="logout-link">
         <a href="{% url 'welcome' %}" class="btn btn-primary">logout</a>
     </div>
+
+    <div id="companyModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="companyModalTitle">
+            <button type="button" class="modal-close" id="modalClose" aria-label="Close">x</button>
+            <h2 id="companyModalTitle">Set your target</h2>
+            <p class="modal-subtitle">Choose a company and role to get matching interview questions.</p>
+            <form id="companyForm">
+                <label for="companyInput">Company</label>
+                <input type="text" id="companyInput" name="company" placeholder="e.g., Google" required>
+
+                <label for="roleInput">Role</label>
+                <input type="text" id="roleInput" name="role" placeholder="e.g., Software Engineer" required>
+
+                <div id="companyError" class="modal-error" role="alert"></div>
+
+                <button type="submit" class="btn btn-primary modal-submit">Start interview</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const startInterviewBtn = document.getElementById('startInterviewBtn');
+        const companyModal = document.getElementById('companyModal');
+        const modalClose = document.getElementById('modalClose');
+        const companyForm = document.getElementById('companyForm');
+        const companyInput = document.getElementById('companyInput');
+        const roleInput = document.getElementById('roleInput');
+        const companyError = document.getElementById('companyError');
+
+        const openModal = () => {
+            companyModal.classList.add('open');
+            companyModal.setAttribute('aria-hidden', 'false');
+            companyError.textContent = '';
+            companyInput.focus();
+        };
+
+        const closeModal = () => {
+            companyModal.classList.remove('open');
+            companyModal.setAttribute('aria-hidden', 'true');
+        };
+
+        startInterviewBtn.addEventListener('click', openModal);
+        modalClose.addEventListener('click', closeModal);
+        companyModal.addEventListener('click', (event) => {
+            if (event.target === companyModal) {
+                closeModal();
+            }
+        });
+
+        companyForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const company = companyInput.value.trim();
+            const role = roleInput.value.trim();
+
+            if (!company || !role) {
+                companyError.textContent = 'Please enter both company and role.';
+                return;
+            }
+
+            const params = new URLSearchParams({
+                company: company,
+                role: role
+            });
+
+            window.location.href = `/interview/?${params.toString()}`;
+        });
+    </script>
 
 
 </body>

@@ -113,6 +113,8 @@ def register(request):
 def interview(request):
     # Get question type from URL parameter (default: general)
     question_type = request.GET.get('type', 'general')
+    target_company = request.GET.get('company', '').strip()
+    target_role = request.GET.get('role', '').strip()
     
     # Default fallback questions
     default_questions = {
@@ -121,29 +123,50 @@ def interview(request):
         'behavioral': "Describe a time you faced a significant challenge at work and how you handled it."
     }
     
-    # Try to get random question from database
-    try:
-        question_obj = CommunityQuestion.objects.filter(
-            question_type=question_type,
-            is_approved=True
-        ).order_by('?').first()  # Random question
-        
-        if question_obj:
-            question_text = question_obj.text
-            question_source = f"Community Question • {question_obj.vote_count} votes"
-        else:
-            # No questions in database, use default
+    question_text = None
+    question_source = None
+
+    # Try to get random question from company/role question bank first
+    if target_company and target_role:
+        try:
+            question_obj = Question.objects.filter(
+                company__iexact=target_company,
+                role__iexact=target_role
+            ).order_by('?').first()
+
+            if question_obj:
+                question_text = question_obj.text
+                question_source = f"{question_obj.company} • {question_obj.role}"
+        except Exception as e:
+            logger.error(f"Error loading company/role question: {e}")
+
+    # Fall back to community questions if no company/role match
+    if not question_text:
+        try:
+            question_obj = CommunityQuestion.objects.filter(
+                question_type=question_type,
+                is_approved=True
+            ).order_by('?').first()  # Random question
+
+            if question_obj:
+                question_text = question_obj.text
+                question_source = f"Community Question • {question_obj.vote_count} votes"
+            else:
+                # No questions in database, use default
+                question_text = default_questions.get(question_type, default_questions['general'])
+                question_source = "Default Question"
+        except Exception as e:
+            logger.error(f"Error loading community question: {e}")
+            # If database error or table doesn't exist yet, use default
             question_text = default_questions.get(question_type, default_questions['general'])
             question_source = "Default Question"
-    except:
-        # If database error or table doesn't exist yet, use default
-        question_text = default_questions.get(question_type, default_questions['general'])
-        question_source = "Default Question"
     
     return render(request, 'interview.html', {
         'question': question_text,
         'question_type': question_type,
-        'question_source': question_source
+        'question_source': question_source,
+        'target_company': target_company,
+        'target_role': target_role
     })
 
 def createQuestion(request):

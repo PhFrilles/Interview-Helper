@@ -302,6 +302,10 @@
                 <h3>Question Prompt:</h3>
                 <p id="questionPrompt">{{ question }}</p>
                 <small style="color: #666; font-size: 12px;">{{ question_source }}</small>
+                {% if target_company and target_role %}
+                <br>
+                <small style="color: #666; font-size: 12px;">Target: {{ target_company }} • {{ target_role }}</small>
+                {% endif %}
             </div>
             
             <div class="video-container">
