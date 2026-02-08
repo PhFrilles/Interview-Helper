@@ -1,6 +1,6 @@
 body {
     font-family: "Oswald", serif;
-    background-color: #FFD230;
+    background-color: #EFF0EF;
     color: #fff;
     margin: 0;
     display: flex;
@@ -25,7 +25,7 @@ h3 {
 form {
     background-color: black;
     padding: 20px;
-    color: #FFD230;
+    color: #EFF0EF;
     border-radius: 40px;
     width: 400px;
     margin: 0 auto;
@@ -44,7 +44,7 @@ form p {
 
 form input[type="text"], 
 form input[type="password"] {
-    background-color: #FFD230;
+    background-color: #EFF0EF;
     color: black;
     text-align: center;
     padding: 10px;
@@ -57,7 +57,7 @@ form input[type="password"] {
 }
 
 form input[type="submit"] {
-    background-color: #FFD230;
+    background-color: #EFF0EF;
     color: black;
     font-size: 16px;
     padding: 10px 20px;
@@ -70,7 +70,7 @@ form input[type="submit"] {
 
 form input[type="submit"]:hover {
     background-color: black;
-    color: #FFD230;
+    color: #EFF0EF;
 }
 
 .btn {
@@ -78,7 +78,7 @@ form input[type="submit"]:hover {
     padding: 10px 20px;
     font-size: 14px;
     color: black;
-    background-color: #FFD230;
+    background-color: #EFF0EF;
     border: none;
     border-radius: 5px;
     text-decoration: none;
@@ -86,7 +86,7 @@ form input[type="submit"]:hover {
 
 .btn:hover {
     background-color: black;
-    color: #FFD230;
+    color: #EFF0EF;
 }
 
 .register-link {
