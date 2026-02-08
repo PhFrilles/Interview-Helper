@@ -2,7 +2,11 @@ from django.contrib import admin
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from .models import Question, Rating, Company, Tag, CommunityQuestion, QuestionVote
+=======
+from .models import QuestionBank, Question, Rating, Company, Tag, CommunityQuestion, QuestionVote
+>>>>>>> Stashed changes
 =======
 from .models import QuestionBank, Question, Rating, Company, Tag, CommunityQuestion, QuestionVote
 >>>>>>> Stashed changes
