@@ -17,4 +17,6 @@ urlpatterns = [
     path('logout/', views.logout, name='logout'),
     path('session/success/', views.session_success, name='session_success'),
     path('session/cancel/', views.session_cancel, name='session_cancel'),
+
+    #path('add-question/', views.add_question, name='add_question'),
 ]   

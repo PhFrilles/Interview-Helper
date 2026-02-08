@@ -10,6 +10,7 @@ from django.utils.encoding import smart_str
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import CommunityQuestion
+from .models import Question
 
 import logging
 import json
@@ -146,7 +147,49 @@ def interview(request):
     })
 
 def createQuestion(request):
-    return render(request, 'createQuestion.html')
+    """
+    Handle both form display and submission
+    """
+    context = {}
+    
+    if request.method == 'POST':
+        # Get form data
+        company = request.POST.get('company', '').strip()
+        role = request.POST.get('role', '').strip()
+        question = request.POST.get('question', '').strip()
+        
+        # Save to context for re-populating form
+        context['company'] = company
+        context['role'] = role
+        context['question'] = question
+        
+        # Check if all fields are filled
+        if company and role and question:
+            try:
+                # Save to database
+                Question.objects.create(
+                    company=company,
+                    role=role,
+                    text=question,
+                    creator=request.user  # Make sure user is logged in
+                )
+                
+                # Show success message
+                context['success'] = True
+                
+                # Clear form fields after successful submission
+                context['company'] = ''
+                context['role'] = ''
+                context['question'] = ''
+                
+            except Exception as e:
+                logger.error(f"Error saving question: {e}")
+                context['error'] = f'Error saving question: {str(e)}'
+        else:
+            # Show error
+            context['error'] = 'Please fill all fields'
+    
+    return render(request, 'createQuestion.html', context)
 
 #conversion of video to audio
 def convert_video_to_audio(video_path, audio_path=None):
@@ -698,6 +741,8 @@ def test_gemini_connection(request):
             'success': False,
             'message': str(e)
         })
+
+
         
 @login_required
 def session_success(request):
