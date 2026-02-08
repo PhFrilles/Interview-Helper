@@ -189,7 +189,8 @@
             
             <div class="question-display">
                 <h3>Question Prompt:</h3>
-                <p id="questionPrompt">Tell me about yourself and why you're interested in this position.</p>
+                <p id="questionPrompt">{{ question }}</p>
+                <small style="color: #666; font-size: 12px;">{{ question_source }}</small>
             </div>
             
             <div class="video-container">
@@ -260,12 +261,8 @@
         const btnText = document.getElementById('btnText');
         const btnSpinner = document.getElementById('btnSpinner');
         
-        // Questions for each type
-        const questions = {
-            general: "Tell me about yourself and why you're interested in this position.",
-            technical: "Explain a complex technical concept or project you've worked on recently.",
-            behavioral: "Describe a time you faced a significant challenge at work and how you handled it."
-        };
+        // Current question type from server
+        let currentQuestionType = '{{ question_type }}';
         
         // Variables
         let mediaRecorder = null;
@@ -275,13 +272,14 @@
         let recordedBlob = null;
         let ttsAudioUrl = null;
         
-        // Update question when type changes
+        // Update question when type changes - reload page with new type
         questionTypeSelect.addEventListener('change', function() {
-            questionPrompt.textContent = questions[this.value] || questions.general;
+            // Reload page with new question type parameter
+            window.location.href = `/interview/?type=${this.value}`;
         });
         
-        // Initialize with default question
-        questionPrompt.textContent = questions.general;
+        // Set dropdown to current type
+        questionTypeSelect.value = currentQuestionType;
         
         // Request camera and microphone access
         async function initializeCamera() {
@@ -515,7 +513,8 @@
                     
             } catch (error) {
                 console.error('Submission error:', error);
-                showError('Network error: ' + error.message + '. Please try again.');
+                // Show user-friendly error, log technical details to console
+                showError('Unable to submit your response. Please check your connection and try again.');
             } finally {
                 // Reset button
                 submitBtn.disabled = false;
@@ -560,10 +559,11 @@
                 });
 
                 if (!response.ok) {
-                    let message = `TTS error: ${response.status}`;
+                    let message = 'Unable to generate audio';
                     try {
                         const errData = await response.json();
                         if (errData && errData.error) {
+                            // Use server-provided error message (already user-friendly)
                             message = errData.error;
                         }
                     } catch (e) {
@@ -587,7 +587,9 @@
                 await audio.play();
                 ttsStatus.textContent = 'Playing audio.';
             } catch (error) {
-                showError(error.message || 'Failed to generate audio.');
+                console.error('TTS error:', error);
+                // Show user-friendly message, log details to console
+                showError(error.message || 'Unable to play audio. Please try again.');
                 ttsStatus.textContent = '';
             } finally {
                 ttsBtn.disabled = false;

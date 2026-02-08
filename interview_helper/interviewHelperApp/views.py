@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from django.utils.encoding import smart_str
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
+from .models import CommunityQuestion
 
 import logging
 import json
@@ -50,7 +51,8 @@ logger = logging.getLogger(__name__)
 client = None
 if GEMINI_AVAILABLE and genai is not None:
     try:
-        GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', 'AIzaSyAHXYkFv4HP2Detzi6Yobc0W30_CyRXeEU')
+        # Try to get from settings first, then environment variable, then fallback
+        GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', os.getenv('GEMINI_API_KEY', 'AIzaSyBAHtymG7q3CJpYVRmIXdgIruIH8s3SsRY'))
         
         # NEW API for google-genai package
         client = genai.Client(api_key=GEMINI_API_KEY)
@@ -108,9 +110,40 @@ def register(request):
         return render(request, 'register.html')
     
 def interview(request):
+    # Get question type from URL parameter (default: general)
+    question_type = request.GET.get('type', 'general')
     
+    # Default fallback questions
+    default_questions = {
+        'general': "Tell me about yourself and why you're interested in this position.",
+        'technical': "Explain a complex technical concept or project you've worked on recently.",
+        'behavioral': "Describe a time you faced a significant challenge at work and how you handled it."
+    }
     
-    return render(request, 'interview.html')
+    # Try to get random question from database
+    try:
+        question_obj = CommunityQuestion.objects.filter(
+            question_type=question_type,
+            is_approved=True
+        ).order_by('?').first()  # Random question
+        
+        if question_obj:
+            question_text = question_obj.text
+            question_source = f"Community Question • {question_obj.vote_count} votes"
+        else:
+            # No questions in database, use default
+            question_text = default_questions.get(question_type, default_questions['general'])
+            question_source = "Default Question"
+    except:
+        # If database error or table doesn't exist yet, use default
+        question_text = default_questions.get(question_type, default_questions['general'])
+        question_source = "Default Question"
+    
+    return render(request, 'interview.html', {
+        'question': question_text,
+        'question_type': question_type,
+        'question_source': question_source
+    })
 
 def createQuestion(request):
     return render(request, 'createQuestion.html')
@@ -315,13 +348,27 @@ def get_gemini_feedback_from_video(video_path, question_type="general"):
         return response.text
         
     except Exception as e:
+        error_str = str(e)
         logger.error(f"Gemini API error: {e}")
+        
+        # Check for specific API errors and provide user-friendly messages
+        if "PERMISSION_DENIED" in error_str or "403" in error_str:
+            if "leaked" in error_str.lower():
+                logger.critical("API key reported as leaked!")
+                return "AI service configuration issue. Please contact support."
+            return "AI service is temporarily unavailable. Please try again later."
+        elif "QUOTA_EXCEEDED" in error_str or "429" in error_str:
+            return "Service limit reached. Please try again in a few minutes."
+        elif "INVALID_ARGUMENT" in error_str or "400" in error_str:
+            return "Video format issue. Please try recording again."
+        
         # Fallback to audio if video fails
         try:
             print("Video analysis failed, trying audio conversion...")
             return get_gemini_feedback_from_audio_fallback(video_path, question_type)
         except Exception as fallback_error:
-            return f"Error getting feedback: {str(e)}"
+            logger.error(f"Audio fallback failed: {fallback_error}")
+            return "Unable to analyze your response at this time. Please try again."
 
 @login_required
 @csrf_exempt
@@ -413,11 +460,26 @@ def analyze_interview(request):
             if os.path.exists(video_path):
                 os.remove(video_path)
             
+            error_str = str(e)
             logger.error(f"Processing error: {e}", exc_info=True)
+            
+            # Determine user-friendly error message
+            if "PERMISSION_DENIED" in error_str or "403" in error_str:
+                error_message = "AI service is currently unavailable. Please contact support."
+            elif "QUOTA_EXCEEDED" in error_str or "429" in error_str:
+                error_message = "Service limit reached. Please try again in a few minutes."
+            elif "API key" in error_str or "leaked" in error_str.lower():
+                error_message = "Configuration issue. Please contact support."
+            elif "timeout" in error_str.lower():
+                error_message = "Analysis took too long. Please try with a shorter video."
+            elif "Both video and audio analysis failed" in error_str:
+                error_message = "Unable to process your video. Try recording in a different format."
+            else:
+                error_message = "Unable to analyze your response. Please try again."
+            
             return JsonResponse({
                 'success': False, 
-                'error': f'Video analysis error: {str(e)}',
-                'suggestion': 'Try recording in MP4 format or keeping the video under 2 minutes.'
+                'error': error_message
             }, status=500)
             
     except Exception as e:
