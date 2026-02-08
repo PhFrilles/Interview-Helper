@@ -13,7 +13,7 @@
 </head>
 <body>
 
-    <link rel="stylesheet" href="{% static 'home_style.css' %}">
+    <link rel="stylesheet" href="{% static 'home.css' %}">
 
     <h1>Home page</h1>
 
@@ -23,6 +23,10 @@
 
     <div class="create-question-link">
         <a href="{% url 'createQuestion' %}" class="btn btn-primary">Create an interview question</a>
+    </div>
+
+    <div class="logout-link">
+        <a href="{% url 'welcome' %}" class="btn btn-primary">logout</a>
     </div>
 
 

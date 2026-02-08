@@ -3,190 +3,46 @@ body {
     margin: 0; 
     padding: 0; 
     background-color: #EFF0EF;
-}
-
-h1{
-    color: black;
-    text-align: center;
-}
-
-h2{
-    color: black;
-    text-align: center;
-}
-.container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    padding: 20px;
-}
-
-.session-box {
-    width: 250px;
-    height: 250px;
-    background-color: #FFD230;
-    border-radius: 50px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    padding: 10px;
-    text-align: center;
-    align-items: center; 
-}
-
-.session-box:empty {
-    padding-bottom: 0; /* Removes padding at the bottom */
-}
-
-.session-box h3 {
-    margin: 0;
-    font-size: 20px;
-    font-family: "Oswald", serif;
-    color: black;
     align-items: center;
+    justify-content: center;
+    min-height: 100vh;
 }
 
-.session-box p {
-    margin: 5px 0;
-    font-size: 14px;
+h1 {
     color: black;
-    font-family: "Oswald", serif;
-}
-
-.session-box .price {
-    font-weight: bold;
-    color: black;
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 2.5em;
 }
 
 .btn {
-    display: inline-block;
-    padding: 10px 20px;
-    font-size: 14px;
-    color: #fff;
-    background-color: black;
-    border: none;
-    border-radius: 100px;
-    text-decoration: none;
-    align-self: center;
-}
-
-.btn:hover {
-    background-color: #FFD230;
-    color: black;
-}
-
-form {
-    padding: 10px;
-    background-color: black;
-    color: #EFF0EF;
-    border: 1px solid #ddd;
-    border-radius: 100px;
-    width: 1000px;
-    margin: 0 auto; /* Centers the form horizontally */
-    text-align: center; /* Ensures the text inside is also centered */
-    box-sizing: border-box; /* Keeps width consistent with padding and borders */
-}
-
-form label {
-    font-weight: bold;
-}
-
-form input {
-    padding: 5px;
-    margin-right: 10px;
-    border: 1px solid #ccc;
-    border-radius: 100px;
-
-}
-
-form select{
-    padding: 5px;
-    margin-right: 10px;
-    border: 1px solid #ccc;
-    border-radius: 100px;
-    color: black;
-}
-
-.btn {
-    padding: 5px 15px;
+    padding: 20px 40px;
     background-color: #EFF0EF;
     color: black;
-    border: none;
+    border: 2px solid black;
     border-radius: 100px;
     cursor: pointer;
+    font-size: 1.2em;
+    font-family: "Oswald", serif;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 15px;
+    text-decoration: none;
+    display: inline-block;
 }
+
+
+
 
 .btn:hover {
     background-color: black;
     color: #EFF0EF;
+    transform: scale(1.05);
 }
 
-
-
-
-
-
-header {
-    background-color: #FFD230;
-    padding: 15px 30px;
-    display: flex;
-    justify-content: space-between; /* Align items to the left and right */
-    align-items: center;
-    width: 100vw; /* Cover the full viewport width */
-    box-sizing: border-box; /* Include padding in width calculation */ 
-}
-
-.header-left {
-    font-size: 24px;
-    font-weight: bold;
-    text-align: center;
-}
-
-.header-right a {
-    margin-left: 15px;
-    text-decoration: none;
-    padding: 8px 15px;
-    background-color: black;
-    color: #FFD230;
-    border-radius: 100px;
-    font-size: 16px;
-}
-
-.header-right a:hover {
-    background-color: #FFD230;
-    color: black;
-}
-
-
-header {
-    background-color: #FFD230;
-    padding: 15px 30px;
-    display: flex;
-    justify-content: space-between; /* Align items to the left and right */
-    align-items: center;
-    width: 100vw; /* Cover the full viewport width */
-    box-sizing: border-box; /* Include padding in width calculation */ 
-}
-
-.header-left {
-    font-size: 30px;
-    font-weight: 700px;
-    flex-grow: 1;                  /* Allow the left section to grow and take available space */
-    display: flex;
-    justify-content: center; 
-}
-
-.header-right a {
-    margin-left: 15px;
-    text-decoration: none;
-    padding: 8px 15px;
-    background-color: black;
-    color: white;
-    border-radius: 100px;
-    font-size: 16px;
-}
-
-.header-right a:hover {
-    background-color: #FFD230;
-    color: black;
+.register-link,
+.login-link {
+    margin: 10px;
 }
