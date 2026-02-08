@@ -123,5 +123,9 @@ STATICFILES_DIRS = (os.path.join(BASE_DIR,'static'),)
 GEMINI_API_KEY = 'AIzaSyBAHtymG7q3CJpYVRmIXdgIruIH8s3SsRY'
 
 # ElevenLabs (Text-to-Speech)
+<<<<<<< Updated upstream
 ELEVENLABS_API_KEY = 'sk_6105eec568594b5967f41a9edfe9ffb4714d82bc0d36b6cf'
+=======
+ELEVENLABS_API_KEY = 'sk_1409e15cd22b46ed2a5480cee1de84fc0c5bddd6862654f5'
+>>>>>>> Stashed changes
 ELEVENLABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'

@@ -1,5 +1,9 @@
 from django.contrib import admin
+<<<<<<< Updated upstream
 from .models import Question, Rating, Company, Tag, CommunityQuestion, QuestionVote
+=======
+from .models import QuestionBank, Question, Rating, Company, Tag, CommunityQuestion, QuestionVote
+>>>>>>> Stashed changes
 
 # Register your models here.
 admin.site.register(Question)

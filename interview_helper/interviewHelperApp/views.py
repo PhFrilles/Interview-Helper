@@ -144,9 +144,12 @@ def interview(request):
         'question_type': question_type,
         'question_source': question_source
     })
+<<<<<<< Updated upstream
 
 def createQuestion(request):
     return render(request, 'createQuestion.html')
+=======
+>>>>>>> Stashed changes
 
 #conversion of video to audio
 def convert_video_to_audio(video_path, audio_path=None):
