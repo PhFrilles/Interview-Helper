@@ -2,59 +2,126 @@
 <html>
 <head>
     <title>Interview Practice</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #f6f7f9;
+            --surface: #ffffff;
+            --surface-2: #f0f2f5;
+            --text: #0f172a;
+            --muted: #5b6476;
+            --border: #e2e8f0;
+            --accent: #2b5d9b;
+            --accent-dark: #234b7d;
+            --danger: #dc2626;
+            --danger-dark: #b91c1c;
+            --success: #16a34a;
+            --shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        }
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: "Sora", sans-serif;
+            background: linear-gradient(180deg, var(--bg) 0%, #eef1f5 100%);
+            color: var(--text);
+            margin: 0;
+        }
+        .page {
+            max-width: 980px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 32px 20px 60px;
+        }
+        .page-header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: -0.02em;
+        }
+        .page-header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
         }
         .container {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
+            background: var(--surface);
+            padding: 22px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
         }
         label {
             display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
         }
-        select {
+        select,
+        input,
+        textarea {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            font-family: inherit;
+            font-size: 15px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        select:focus,
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(43, 93, 155, 0.18);
         }
         button {
-            background: #007bff;
-            color: white;
+            background: var(--accent);
+            color: #fff;
             border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
+            padding: 10px 18px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
             margin-right: 10px;
             margin-bottom: 10px;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+            box-shadow: 0 6px 16px rgba(43, 93, 155, 0.2);
         }
         button:hover {
-            background: #0056b3;
+            background: var(--accent-dark);
+            transform: translateY(-1px);
         }
         button:disabled {
-            background: #cccccc;
+            background: #b6c1cf;
             cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
         button.record {
-            background: #dc3545;
+            background: var(--danger);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.2);
         }
         button.record:hover {
-            background: #c82333;
+            background: var(--danger-dark);
         }
         button.recording {
-            background: #dc3545;
+            background: var(--danger);
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
@@ -76,10 +143,11 @@
         }
         .feedback {
             margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 5px;
-            border-left: 4px solid #007bff;
+            padding: 16px;
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
         }
         .tts-controls {
             margin-top: 12px;
@@ -89,21 +157,23 @@
         }
         .tts-status {
             font-size: 13px;
-            color: #555;
+            color: var(--muted);
         }
         .error {
-            color: #dc3545;
-            padding: 10px;
-            background: #f8d7da;
-            border-radius: 4px;
-            margin-top: 10px;
+            color: #7f1d1d;
+            padding: 12px 14px;
+            background: #fee2e2;
+            border-radius: 10px;
+            margin-top: 12px;
+            border: 1px solid #fecaca;
         }
         .success {
-            color: #28a745;
-            padding: 10px;
-            background: #d4edda;
-            border-radius: 4px;
-            margin-top: 10px;
+            color: #14532d;
+            padding: 12px 14px;
+            background: #dcfce7;
+            border-radius: 10px;
+            margin-top: 12px;
+            border: 1px solid #bbf7d0;
         }
         .timer {
             font-size: 24px;
@@ -114,18 +184,24 @@
         .video-container {
             text-align: center;
             margin: 20px 0;
+            background: var(--surface-2);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px dashed var(--border);
         }
         video {
             width: 100%;
             max-width: 640px;
-            border-radius: 8px;
-            background: #000;
+            border-radius: 12px;
+            background: #0b0f19;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
         }
         .controls {
             display: flex;
             justify-content: center;
             gap: 10px;
             margin-top: 15px;
+            flex-wrap: wrap;
         }
         .recording-indicator {
             display: inline-block;
@@ -141,40 +217,75 @@
             50% { opacity: 0.3; }
         }
         .question-display {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
+            background: var(--surface);
+            padding: 16px;
+            border-radius: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid #007bff;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
         }
         .question-display h3 {
             margin-top: 0;
         }
         .instructions {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
+            background: var(--surface-2);
+            padding: 16px;
+            border-radius: 12px;
             margin-bottom: 20px;
             font-size: 14px;
+            border: 1px solid var(--border);
+        }
+        .instructions ol {
+            margin: 10px 0 0 18px;
+            color: var(--muted);
+        }
+        .quick-links {
+            margin-top: 24px;
+        }
+        .quick-links h3 {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .quick-links a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .quick-links a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 640px) {
+            .page {
+                padding: 24px 16px 50px;
+            }
+            .container {
+                padding: 18px;
+            }
+            .page-header h1 {
+                font-size: 26px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Interview Practice</h1>
-    <p>Record your interview response video to get AI feedback.</p>
-    
-    <div class="instructions">
-        <strong>Instructions:</strong>
-        <ol>
-            <li>Allow camera and microphone access when prompted</li>
-            <li>Select a question type and read the prompt</li>
-            <li>Click "Start Recording" and answer the question</li>
-            <li>Click "Stop Recording" when finished</li>
-            <li>Review your recording and submit for AI feedback</li>
-        </ol>
-    </div>
-    
-    <div class="container">
+    <div class="page">
+        <header class="page-header">
+            <h1>Interview Practice</h1>
+            <p>Record your interview response video to get AI feedback.</p>
+        </header>
+
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Allow camera and microphone access when prompted</li>
+                <li>Select a question type and read the prompt</li>
+                <li>Click "Start Recording" and answer the question</li>
+                <li>Click "Stop Recording" when finished</li>
+                <li>Review your recording and submit for AI feedback</li>
+            </ol>
+        </div>
+
+        <div class="container">
         <form id="interviewForm">
             {% csrf_token %}
             
@@ -232,11 +343,12 @@
         </div>
     </div>
     
-    <div style="margin-top: 20px;">
-        <h3>Quick Links:</h3>
-        <p><a href="/system-status/">Check System Status</a></p>
-        <p><a href="/test-gemini/">Test Gemini Connection</a></p>
-        <p><a href="/home/">Return to Home</a></p>
+        <div class="quick-links">
+            <h3>Quick Links:</h3>
+            <p><a href="/system-status/">Check System Status</a></p>
+            <p><a href="/test-gemini/">Test Gemini Connection</a></p>
+            <p><a href="/home/">Return to Home</a></p>
+        </div>
     </div>
     
     <script>
