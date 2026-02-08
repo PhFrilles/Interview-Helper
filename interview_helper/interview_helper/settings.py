@@ -121,7 +121,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (os.path.join(BASE_DIR,'static'),)
 
 # Gemini AI (Interview Feedback)
-GEMINI_API_KEY = 'AIzaSyBAHtymG7q3CJpYVRmIXdgIruIH8s3SsRY'
+GEMINI_API_KEY = 'AIzaSyDEcWuVCzWbYxZjcgP-H061LzFce7TzGTQ'
 
 # ElevenLabs (Text-to-Speech)
 ELEVENLABS_API_KEY = 'sk_6105eec568594b5967f41a9edfe9ffb4714d82bc0d36b6cf'
