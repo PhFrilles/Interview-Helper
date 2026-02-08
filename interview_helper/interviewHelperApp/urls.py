@@ -7,6 +7,7 @@ urlpatterns = [
     path('register/', views.register, name='register'),
     path('home/', views.home, name='home'),
     path('interview/', views.interview, name='interview'),
+    path('createQuestion/', views.createQuestion, name='createQuestion'),
     
     # NEW PATHS TO ADD:
     path('analyze-interview/', views.analyze_interview, name='analyze_interview'),
