@@ -146,9 +146,12 @@ def interview(request):
     })
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
 def createQuestion(request):
     return render(request, 'createQuestion.html')
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
