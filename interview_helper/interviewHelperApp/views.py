@@ -144,9 +144,21 @@ def interview(request):
         'question_type': question_type,
         'question_source': question_source
     })
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
 def createQuestion(request):
     return render(request, 'createQuestion.html')
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 
 #conversion of video to audio
 def convert_video_to_audio(video_path, audio_path=None):
@@ -515,11 +527,10 @@ def tts_feedback(request):
             'error': 'Text is required for speech synthesis.'
         }, status=400)
 
-    if len(text) > 2000:
-        return JsonResponse({
-            'success': False,
-            'error': 'Text is too long for speech synthesis (max 2000 chars).'
-        }, status=400)
+    # Limit to 500 characters to stay within free tier quota
+    if len(text) > 500:
+        text = text[:497] + "..."
+        logger.info(f"Truncated TTS text to 500 chars to save credits")
 
     voice_id = getattr(
         settings,
@@ -552,11 +563,20 @@ def tts_feedback(request):
         }, status=502)
 
     if response.status_code != 200:
+        error_detail = response.text[:200]
         logger.error(
             "ElevenLabs error %s: %s",
             response.status_code,
-            response.text[:200]
+            error_detail
         )
+        
+        # Check for quota exceeded
+        if "quota_exceeded" in error_detail.lower():
+            return JsonResponse({
+                'success': False,
+                'error': 'Voice synthesis quota exceeded. The feedback text is too long for your current plan.'
+            }, status=502)
+        
         return JsonResponse({
             'success': False,
             'error': 'TTS provider returned an error.'
